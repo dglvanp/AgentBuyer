@@ -71,13 +71,14 @@ export function displayName(value: string): string {
 const BACKEND_PHRASES: Array<[RegExp, string]> = [
   // Narrativa del agente (core/agent_loop.py)
   [/Encontró (\d+) vuelos en la web \(búsqueda real\)\./g, "Found $1 flights on the web (real search)."],
+  [/Encontró (\d+) hoteles en la web \(búsqueda real\)\./g, "Found $1 hotels on the web (real search)."],
   [/Aplicó el límite price_below de ([\d.]+) USD y eligió (.+?) de (.+?) por ([\d.]+) USD\./g, "Applied the price_below limit of $1 USD and chose $2 from $3 for $4 USD."],
   [/No encontró un límite price_below utilizable y eligió (.+?) de (.+?) por ([\d.]+) USD\./g, "Did not find a usable price_below limit and chose $1 from $2 for $3 USD."],
   [/La compra fue completada tras recibir APPROVE\./g, "The purchase was completed after APPROVE."],
   [/La compra no procedió: verify devolvió (\w+)\./g, "The purchase did not proceed: verify returned $1."],
   [/Compra completada por Saturday: (.+?) por ([\d.]+) USD\./g, "Purchase completed by Saturday: $1 for $2 USD."],
-  [/La búsqueda web no devolvió vuelos; el agente no intentó ninguna compra\./g, "The web search returned no flights; the agent did not attempt any purchase."],
-  [/Saturday no encontró vuelos en este momento\. No se realizó ningún intento de compra; intenta de nuevo\./g, "Saturday couldn't find flights right now. No purchase attempt was made; try again."],
+  [/La búsqueda web no devolvió (?:vuelos|ofertas); el agente no intentó ninguna compra\./g, "The web search returned no offers; the agent did not attempt any purchase."],
+  [/Saturday no encontró (?:vuelos|ofertas) en este momento\. No se realizó ningún intento de compra; intenta de nuevo\./g, "Saturday couldn't find offers right now. No purchase attempt was made; try again."],
   [/Vuelo más barato dentro de price_below\./g, "Cheapest flight within price_below."],
   [/No hubo vuelo dentro de price_below; se intentó el más barato disponible\./g, "No flight was within price_below; the cheapest available was attempted."],
   // Veredictos del guardián (api/verify.py)

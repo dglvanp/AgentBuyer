@@ -28,7 +28,6 @@ const verificationStatusLabel: Record<VerificationStatus, string> = {
 const categories = [
   { value: "travel.flights", label: "Flights" },
   { value: "travel.hotels", label: "Hotels" },
-  { value: "digital.subscriptions", label: "Subscriptions" },
 ];
 
 const merchants = [
@@ -38,9 +37,16 @@ const merchants = [
   { value: "mch_expedia", label: "Expedia" },
 ];
 
-// La búsqueda web real devuelve ofertas de estos sitios de viajes; un mandato
-// de vuelos debe permitirlos o toda compra real escalaría por comercio.
-const FLIGHT_SEARCH_MERCHANTS = ["mch_vuelaya", "mch_despegar", "mch_kayak", "mch_expedia"];
+// La búsqueda web real devuelve ofertas de estos sitios de viajes (vuelos y
+// hoteles); un mandato de viaje debe permitirlos o toda compra real escalaría.
+const TRAVEL_SEARCH_MERCHANTS = ["mch_vuelaya", "mch_despegar", "mch_kayak", "mch_expedia"];
+
+// Suma noches a una fecha YYYY-MM-DD (check-out del hotel).
+function addDays(value: string, days: number) {
+  const date = dateFromKey(value);
+  date.setDate(date.getDate() + days);
+  return dateKey(date);
+}
 
 function endOfMonth() {
   const now = new Date();
@@ -212,6 +218,10 @@ export default function MandateCreator({ onCreated, onDemoCreated }: MandateCrea
   const [flightOrigin, setFlightOrigin] = useState("BUE");
   const [flightDestination, setFlightDestination] = useState("COR");
   const [departureDate, setDepartureDate] = useState(nearTermDate());
+  // Campos de hotel: dónde, check-in y cuántas noches (check-out se calcula).
+  const [hotelDestination, setHotelDestination] = useState("Cordoba, Argentina");
+  const [hotelCheckIn, setHotelCheckIn] = useState(nearTermDate());
+  const [hotelNights, setHotelNights] = useState("3");
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
 
   // 🛡️ Identidad y Datos Bancarios DLP (valores demo de Marta, editables)
@@ -330,6 +340,12 @@ export default function MandateCreator({ onCreated, onDemoCreated }: MandateCrea
       setCurrentStep(3);
       return false;
     }
+    const nights = Number(hotelNights);
+    if (category === "travel.hotels" && (!hotelDestination.trim() || !hotelCheckIn || !Number.isInteger(nights) || nights <= 0)) {
+      setError("Fill in the destination, check-in date, and a valid number of nights to search for hotels.");
+      setCurrentStep(3);
+      return false;
+    }
     if (!category || !merchant) {
       setError("Choose a category and a merchant for the permission.");
       setCurrentStep(3);
@@ -354,13 +370,20 @@ export default function MandateCreator({ onCreated, onDemoCreated }: MandateCrea
           destination: demoValues.destination.trim(),
           departure_date: demoValues.date,
         },
+      } : category === "travel.hotels" ? {
+        search_fields: {
+          destination: hotelDestination.trim(),
+          check_in: hotelCheckIn,
+          check_out: addDays(hotelCheckIn, nights),
+          nights,
+        },
       } : {}),
       constraints: {
         max_amount_per_purchase: amount,
         currency: "USD",
         allowed_categories: [category],
-        allowed_merchants: category === "travel.flights"
-          ? Array.from(new Set([merchant, ...FLIGHT_SEARCH_MERCHANTS]))
+        allowed_merchants: category.startsWith("travel.")
+          ? Array.from(new Set([merchant, ...TRAVEL_SEARCH_MERCHANTS]))
           : [merchant],
         max_uses: uses,
         conditions: [{ type: "price_below", value: price }],
@@ -598,7 +621,7 @@ export default function MandateCreator({ onCreated, onDemoCreated }: MandateCrea
             <label>How much can it spend at most per purchase?<div className="money-field"><span>USD $</span><input value={maxAmount} onChange={(event) => setMaxAmount(event.target.value)} inputMode="decimal" placeholder="150" required /></div></label>
             <div className="form-pair">
               <label>What can it spend on?<select value={category} onChange={(event) => setCategory(event.target.value)}><option value="" disabled>Choose a category…</option>{categories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-              <label>At which merchants?<select value={merchant} onChange={(event) => setMerchant(event.target.value)}><option value="" disabled>Choose a merchant…</option>{merchants.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{category === "travel.flights" && <small className="field-hint">For flights, Saturday compares trusted travel sites (VuelaYa, Despegar, Kayak, Expedia) — all included in your permission.</small>}</label>
+              <label>At which merchants?<select value={merchant} onChange={(event) => setMerchant(event.target.value)}><option value="" disabled>Choose a merchant…</option>{merchants.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{category.startsWith("travel.") && <small className="field-hint">For travel, Saturday compares trusted sites (VuelaYa, Despegar, Kayak, Expedia) — all included in your permission.</small>}</label>
             </div>
             <div className="form-pair">
               <label>How many purchases at most?<input value={maxUses} onChange={(event) => setMaxUses(event.target.value)} inputMode="numeric" placeholder="3" required /></label>
@@ -613,6 +636,15 @@ export default function MandateCreator({ onCreated, onDemoCreated }: MandateCrea
               <label>Destination<input value={flightDestination} onChange={(event) => setFlightDestination(event.target.value)} placeholder="COR or Mexico City" required /></label>
             </div>
             <label>Departure date<CalendarDatePicker value={departureDate} onChange={setDepartureDate} ariaLabel="Pick the departure date" /></label>
+          </div>}
+
+          {category === "travel.hotels" && currentStep === 3 && <div className="wizard-step flight-search-step">
+            <div className="form-pair">
+              <label>Where will you stay?<input value={hotelDestination} onChange={(event) => setHotelDestination(event.target.value)} placeholder="Cordoba, Argentina" required /></label>
+              <label>How many nights?<input value={hotelNights} onChange={(event) => setHotelNights(event.target.value)} inputMode="numeric" placeholder="3" required /></label>
+            </div>
+            <label>Check-in date<CalendarDatePicker value={hotelCheckIn} onChange={setHotelCheckIn} ariaLabel="Pick the check-in date" /></label>
+            {hotelCheckIn && Number(hotelNights) > 0 && <small className="field-hint">Check-out: {readableDate(addDays(hotelCheckIn, Number(hotelNights)))} ({hotelNights} {Number(hotelNights) === 1 ? "night" : "nights"}).</small>}
           </div>}
 
           {(currentStep === 1 || currentStep === 2) && <div className="wizard-step wizard-security-step" style={{ background: "rgba(30, 41, 59, 0.6)", padding: "14px", borderRadius: "10px", border: "1px solid rgba(77, 124, 255, 0.35)", marginTop: "4px" }}>

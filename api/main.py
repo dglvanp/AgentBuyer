@@ -35,7 +35,7 @@ from core.mandate_store import (
 )
 from core.merchant import vuelaya_merchant, get_flights
 from core.agent_loop import PurchasingAgent, run_agent
-from audit.log import audit_ledger, append_entry, get_trail_for
+from audit.log import audit_ledger, append_entry, get_trail_for, reset_trail
 from core.dispute import dispute_arbiter
 from mandate.adversarial_tests import run_adversarial_suite
 
@@ -629,6 +629,12 @@ def api_webhook_travel_provider(payload: dict):
 
 
 # Audit Trail Router
+@app.post("/audit/reset")
+def api_reset_audit_trail():
+    """Abre una sesión de auditoría limpia al reiniciar/iniciar una demo."""
+    return reset_trail()
+
+
 @app.get("/audit/trail")
 def api_get_audit_trail(
     role: str = Query(default="auditor", pattern="^(human|merchant|auditor)$"),

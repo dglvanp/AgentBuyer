@@ -41,8 +41,10 @@ CATEGORY_SPECS: dict[str, dict[str, Any]] = {
     },
     "hotels": {
         "required": ["destination", "check_in", "check_out"],
-        "optional": ["guests", "room_type"],
-        "merchants": ["Booking.com", "Hotels.com", "Despegar"],
+        "optional": ["guests", "room_type", "nights"],
+        # Los mismos sitios de viaje que vuelos: sus slugs (mch_despegar, etc.)
+        # ya están en allowed_merchants de los mandatos de viaje.
+        "merchants": ["Despegar", "Expedia", "Kayak"],
     },
     "subscriptions": {
         # Sin comparación de comercios: solo el sitio directo del proveedor.

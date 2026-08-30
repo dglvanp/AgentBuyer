@@ -42,7 +42,9 @@ Devuelve ÚNICAMENTE un JSON con:
 - costo_real_estimado: El precio real total sumando costos ocultos.
 - riesgos_detectados: Lista de banderas rojas encontradas.
 - veredicto: "APPROVE" (si es 100% limpia y legítima), "REJECT" (si es trampa/fraude/evasión), o "ESCALATE" (si es dudosa o borderline y requiere que el humano decida).
-- resumen_para_humano: Explicación concisa y persuasiva para la alerta."""
+- resumen_para_humano: Explicación concisa y persuasiva para la alerta.
+
+All human-readable values in the JSON response must be written in English."""
 
     user_prompt = f"""Mandato del Humano:
 - Límite por compra: ${max_permitido:.2f}
@@ -76,33 +78,33 @@ Ejecuta tu auditoría cognitiva completa."""
 
         if trampa_detectada:
             cot = (
-                f"1. El precio en pasarela es ${precio_declarado:.2f}, pero la descripción revela cobros ocultos por fuera (+${cobro_extra:.2f}) o escalas abusivas (48h).\n"
-                f"2. Costo real calculado: ${costo_total:.2f} (Supera el límite autorizado de ${max_permitido:.2f}).\n"
-                f"3. La oferta viola el espíritu del mandato de viaje eficiente y seguro para el usuario."
+                f"1. The gateway price is ${precio_declarado:.2f}, but the description reveals hidden charges (+${cobro_extra:.2f}) or an abusive 48-hour hold.\n"
+                f"2. Estimated real cost: ${costo_total:.2f} (above the authorized limit of ${max_permitido:.2f}).\n"
+                "3. The offer violates the intent of a safe and efficient travel mandate."
             )
             return {
                 "chain_of_thought": cot,
                 "costo_real_estimado": costo_total,
-                "riesgos_detectados": ["Cobro diferido no declarado en pasarela", "Escala abusiva", "Exceso de límite real"],
+                "riesgos_detectados": ["Undisclosed deferred charge", "Abusive 48-hour hold", "Actual cost exceeds the limit"],
                 "veredicto": "REJECT",
-                "resumen_para_humano": f"Trampa detectada: La oferta declara ${precio_declarado:.2f} pero impone ${cobro_extra:.2f} extra y condiciones abusivas."
+                "resumen_para_humano": "The demo flight purchase presents significant risks due to a possible hidden cost from an automatic upgrade that is not clearly specified, plus an unusual 48-hour hold condition that could be misleading. Rejecting this transaction is recommended."
             }
         
         if precio_declarado > max_permitido:
             return {
-                "chain_of_thought": f"El precio declarado de ${precio_declarado:.2f} supera el tope de ${max_permitido:.2f}.",
+                "chain_of_thought": f"The declared price of ${precio_declarado:.2f} exceeds the limit of ${max_permitido:.2f}.",
                 "costo_real_estimado": precio_declarado,
-                "riesgos_detectados": ["Precio superior al límite"],
+                "riesgos_detectados": ["Price above the limit"],
                 "veredicto": "ESCALATE",
-                "resumen_para_humano": f"El vuelo cuesta ${precio_declarado:.2f} (límite ${max_permitido:.2f}). Requiere tu aprobación."
+                "resumen_para_humano": f"The flight costs ${precio_declarado:.2f} (limit ${max_permitido:.2f}). It requires your approval."
             }
 
         return {
-            "chain_of_thought": f"La compra de ${precio_declarado:.2f} en '{item_titulo}' cumple estrictamente los términos sin costos ocultos.",
+            "chain_of_thought": f"The ${precio_declarado:.2f} purchase of '{item_titulo}' meets the terms with no hidden costs.",
             "costo_real_estimado": precio_declarado,
             "riesgos_detectados": [],
             "veredicto": "APPROVE",
-            "resumen_para_humano": "Compra legítima verificada por el Semantic Firewall."
+            "resumen_para_humano": "Legitimate purchase verified by the Semantic Firewall."
         }
 
     # Llamada con GPT-4o / GPT-4o-mini
@@ -132,9 +134,9 @@ Ejecuta tu auditoría cognitiva completa."""
             return parsed
     except Exception as e:
         return {
-            "chain_of_thought": f"Falla en llamada a modelo ({str(e)}). Aplicando principio de seguridad Fail-Closed.",
+            "chain_of_thought": f"Model call failed ({str(e)}). Applying the fail-closed security principle.",
             "costo_real_estimado": precio_declarado,
-            "riesgos_detectados": ["Error de auditoría externa"],
+            "riesgos_detectados": ["External audit error"],
             "veredicto": "ESCALATE",
-            "resumen_para_humano": f"Duda de seguridad por error en auditoría: {str(e)}"
+            "resumen_para_humano": f"Security concern due to an audit error: {str(e)}"
         }

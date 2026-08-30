@@ -192,14 +192,14 @@ def verify_purchase(attempt_purchase: dict[str, Any]):
                 checks.append({
                     "rule": "semantic_firewall",
                     "pass": False,
-                    "detail": audit_res.get("resumen_para_humano", "Trampa oculta detectada en la letra chica.")
+                    "detail": audit_res.get("resumen_para_humano", "Hidden fine-print risk detected.")
                 })
                 return _finish(
                     mandate_id,
                     attempt_id,
                     "REJECT",
                     checks,
-                    f"Compra vetada por Semantic Firewall: {audit_res.get('resumen_para_humano')}"
+                    f"Purchase vetoed by Semantic Firewall: {audit_res.get('resumen_para_humano', 'Hidden fine-print risk detected.')}"
                 )
 
     amount = engine_attempt.get("amount")

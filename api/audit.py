@@ -2,10 +2,16 @@
 
 from fastapi import APIRouter
 
-from audit.log import get_trail_for
+from audit.log import get_trail_for, reset_trail
 
 
 router = APIRouter()
+
+
+@router.post("/audit/reset")
+def reset_audit_trail():
+    """Abre una sesión de auditoría limpia para una nueva demo."""
+    return reset_trail()
 
 
 @router.get("/audit")

@@ -114,23 +114,39 @@ class PurchasingAgent:
         return attempt, result
 
 
-def _discover_flights(search_fields: dict | None) -> tuple[list[dict], str]:
-    """Descubre vuelos SOLO con búsqueda web real (sin catálogo demo).
+def _category_key(mandate: dict) -> str:
+    """Clave de búsqueda ('flights' | 'hotels') según la categoría del mandato."""
+    constraints = mandate.get("constraints", {}) or {}
+    allowed = constraints.get("allowed_categories") or []
+    taxon = allowed[0] if allowed else "travel.flights"
+    return "hotels" if taxon == "travel.hotels" else "flights"
+
+
+def _discover_offers(category_key: str, search_fields: dict | None) -> tuple[list[dict], str]:
+    """Descubre ofertas (vuelos u hoteles) SOLO con búsqueda web real.
 
     Si no hay campos de búsqueda o la búsqueda no devuelve ofertas, regresa
-    una lista vacía: el llamador informa "no encontré vuelos" en vez de
+    una lista vacía: el llamador informa "no encontré ofertas" en vez de
     inventar datos de un catálogo falso.
     """
     if isinstance(search_fields, dict) and search_fields:
-        offers = search_merchant_offers("flights", search_fields)
+        offers = search_merchant_offers(category_key, search_fields)
         if offers:
-            route = f"{search_fields.get('origin', '?')}->{search_fields.get('destination', '?')}"
-            flights = [
+            if category_key == "hotels":
+                nights = search_fields.get("nights")
+                label = f"{search_fields.get('destination', '?')}" + (f" · {nights} nights" if nights else "")
+                taxon = "travel.hotels"
+            else:
+                label = f"{search_fields.get('origin', '?')}->{search_fields.get('destination', '?')}"
+                taxon = "travel.flights"
+            found = [
                 {
                     "id": f"web_{index}",
-                    "route": route,
+                    # "route" es la etiqueta visible (ruta de vuelo o destino de hotel);
+                    # el nombre se conserva por contrato con el frontend.
+                    "route": label,
                     "price": offer["price"],
-                    "category": "travel.flights",
+                    "category": taxon,
                     "merchant_id": _merchant_slug(offer["merchant"]),
                     "merchant": offer["merchant"],
                     "details": offer["details"],
@@ -139,7 +155,7 @@ def _discover_flights(search_fields: dict | None) -> tuple[list[dict], str]:
                 }
                 for index, offer in enumerate(offers)
             ]
-            return flights, "web"
+            return found, "web"
     return [], "web"
 
 
@@ -181,19 +197,20 @@ def run_agent(mandate_id: str, search_fields: dict | None = None) -> dict:
         if isinstance(stored_fields, dict) and stored_fields:
             search_fields = stored_fields
 
-    flights_seen, discovery_source = _discover_flights(search_fields)
+    category_key = _category_key(mandate)
+    flights_seen, discovery_source = _discover_offers(category_key, search_fields)
     limit = _price_limit(mandate)
 
     if not flights_seen:
         message = (
-            "Saturday no encontró vuelos en este momento. "
+            "Saturday no encontró ofertas en este momento. "
             "No se realizó ningún intento de compra; intenta de nuevo."
         )
         append_entry(
             {
                 "type": "agent_run",
                 "mandate_id": mandate_id,
-                "summary": "La búsqueda web no devolvió vuelos; el agente no intentó ninguna compra.",
+                "summary": "La búsqueda web no devolvió ofertas; el agente no intentó ninguna compra.",
             }
         )
         return {
@@ -221,7 +238,7 @@ def run_agent(mandate_id: str, search_fields: dict | None = None) -> dict:
             "category": selected_flight["category"],
             "amount": selected_flight["price"],
             "currency": "USD",
-            "description": f"Vuelo {selected_flight['route']}",
+            "description": (f"Hotel stay: {selected_flight['route']}" if category_key == "hotels" else f"Flight {selected_flight['route']}") + (f" — {selected_flight['details']}" if selected_flight.get("details") else ""),
             "metadata": {
                 "flight_id": selected_flight["id"],
                 "price": selected_flight["price"],
@@ -247,7 +264,7 @@ def run_agent(mandate_id: str, search_fields: dict | None = None) -> dict:
     )
 
     story = (
-        f"Encontró {len(flights_seen)} vuelos en la web (búsqueda real). "
+        f"Encontró {len(flights_seen)} {'hoteles' if category_key == 'hotels' else 'vuelos'} en la web (búsqueda real). "
         + (f"Aplicó el límite price_below de {limit} USD y " if limit is not None else "No encontró un límite price_below utilizable y ")
         + f"eligió {selected_flight['route']} de {selected_flight.get('merchant', selected_flight['merchant_id'])} por {selected_flight['price']} USD. "
         + ("La compra fue completada tras recibir APPROVE." if completed else f"La compra no procedió: verify devolvió {verdict}. {verification.get('human_readable', '')}")

@@ -185,9 +185,12 @@ function MissionControl({ mandateId, onCreateNew, onNavigate, autoStartDemoAt, o
     constraints.max_amount_per_purchase ?? Number.POSITIVE_INFINITY,
     priceLimit ?? Number.POSITIVE_INFINITY,
   );
+  // El copy se adapta a la categoría del mandato (vuelos u hoteles).
+  const isHotels = constraints.allowed_categories?.[0] === "travel.hotels";
+  const offerNoun = isHotels ? "hotels" : "flights";
   const phaseCopy: Record<DecisionPhase, string> = {
     idle: "",
-    discovering: "Searching for real flights on the web…",
+    discovering: `Searching for real ${offerNoun} on the web…`,
     evaluating: "Checking your limits…",
     choosing: "Picking the best option…",
     verifying: "Verifying with the gatekeeper…",
@@ -700,13 +703,13 @@ function MissionControl({ mandateId, onCreateNew, onNavigate, autoStartDemoAt, o
             {phase === "discovering" && (
               <div className="search-live" role="status">
                 <span className="search-pulse" aria-hidden="true" />
-                <p>Saturday is searching for real flights on the web…<br /><small>This can take up to a minute.</small></p>
+                <p>Saturday is searching for real {offerNoun} on the web…<br /><small>This can take up to a minute.</small></p>
               </div>
             )}
 
             {phase !== "discovering" && noOffers && (
               <p className="no-offers-note" role="status">
-                Saturday couldn't find flights right now — try again.
+                Saturday couldn't find {offerNoun} right now — try again.
               </p>
             )}
 
@@ -728,7 +731,7 @@ function MissionControl({ mandateId, onCreateNew, onNavigate, autoStartDemoAt, o
               return (
                 <>
                   <motion.article className={`flight-hero ${withinLimit ? "" : "flight-hero-risk"}`} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
-                    <p className="hero-kicker">SATURDAY PICKED THIS FLIGHT FOR YOU</p>
+                    <p className="hero-kicker">{isHotels ? "SATURDAY PICKED THIS HOTEL FOR YOU" : "SATURDAY PICKED THIS FLIGHT FOR YOU"}</p>
                     <div className="hero-main">
                       <strong className="hero-route">{chosen.route.replace("->", " → ")}</strong>
                       <strong className="hero-price">{amount(chosen.price)}</strong>
@@ -784,7 +787,7 @@ function MissionControl({ mandateId, onCreateNew, onNavigate, autoStartDemoAt, o
             )}
 
             {phase === "idle" && !activity && flights.length === 0 && !noOffers && (
-              <p className="empty-copy">{status === "revoked" ? "Mandate revoked — you can still run the agent to watch the attempt get blocked." : "Run Saturday: it will search for real flights on the web within your permission."}</p>
+              <p className="empty-copy">{status === "revoked" ? "Mandate revoked — you can still run the agent to watch the attempt get blocked." : `Run Saturday: it will search for real ${offerNoun} on the web within your permission.`}</p>
             )}
           </aside>
 

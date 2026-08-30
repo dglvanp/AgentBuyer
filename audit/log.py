@@ -196,3 +196,15 @@ def get_trail_for(role: str = "auditor", mandate_id: str | None = None, attempt_
         entries = AUDIT_TRAIL
 
     return deepcopy(sorted(entries, key=lambda entry: entry["timestamp"], reverse=True))
+
+
+def reset_trail() -> dict:
+    """Reinicia explícitamente la sesión de auditoría en memoria para una demo nueva.
+
+    Durante una sesión el trail sigue siendo append-only. Este corte sólo se
+    invoca al iniciar/reiniciar una demo y también reinicia la cadena hash.
+    """
+    removed = len(AUDIT_TRAIL)
+    AUDIT_TRAIL.clear()
+    audit_ledger.clear()
+    return {"cleared": removed, "status": "reset"}

@@ -105,6 +105,43 @@ def test_agent_run_without_search_fields_reports_no_offers(client):
     assert result["purchase_completed"] is False
 
 
+HOTEL_OFFERS = [
+    {"merchant": "Expedia", "price": 89.0, "currency": "USD",
+     "details": "Hotel Azur Real — Centro, desayuno incluido", "url": "https://expedia.example/h1"},
+    {"merchant": "Despegar", "price": 74.5, "currency": "USD",
+     "details": "Amérian Córdoba Park Hotel", "url": "https://despegar.example/h2"},
+]
+
+HOTEL_FIELDS = {"destination": "Cordoba, Argentina", "check_in": "2026-09-15", "check_out": "2026-09-18", "nights": 3}
+
+
+def hotel_mandate() -> dict:
+    mandate = web_mandate(["mch_vuelaya", "mch_despegar", "mch_kayak", "mch_expedia"])
+    mandate["constraints"]["allowed_categories"] = ["travel.hotels"]
+    mandate["search_fields"] = HOTEL_FIELDS
+    return mandate
+
+
+def test_agent_run_buys_hotels_with_stored_fields(client, monkeypatch):
+    """Mandato de hoteles: descubre con la categoría correcta y compra la más barata."""
+    prompts = []
+    def fake_search(prompt):
+        prompts.append(prompt)
+        return json.dumps(HOTEL_OFFERS)
+    monkeypatch.setattr(merchant_search, "_call_web_search", fake_search)
+    client.post("/mandates", json=hotel_mandate())
+
+    result = client.post("/agent/run", json={"mandate_id": "mnd_web_001"}).json()
+
+    assert "hotels in Cordoba" in prompts[0]
+    assert result["purchase_completed"] is True
+    assert result["selected_flight"]["merchant_id"] == "mch_despegar"
+    assert result["selected_flight"]["price"] == 74.5
+    assert result["selected_flight"]["category"] == "travel.hotels"
+    assert result["attempt"]["purchase"]["category"] == "travel.hotels"
+    assert "3 nights" in result["selected_flight"]["route"]
+
+
 def test_agent_run_uses_mandate_stored_search_fields(client, monkeypatch):
     """Si el request no trae search_fields, se usan los guardados en el mandato."""
     monkeypatch.setattr(merchant_search, "_call_web_search", lambda p: json.dumps(WEB_OFFERS))
