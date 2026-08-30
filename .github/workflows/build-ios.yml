@@ -1,0 +1,50 @@
+name: Build Saturday iOS App
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-14
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Frontend Dependencies
+        working-directory: ./frontend
+        run: |
+          npm ci || npm install
+          npm run build
+          npx cap sync ios
+
+      - name: Build iOS with Xcode
+        working-directory: ./frontend/ios/App
+        run: |
+          xcodebuild clean build \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Debug \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: Package Payload / App
+        working-directory: ./frontend/ios/App/build/Build/Products/Debug-iphoneos
+        run: |
+          mkdir -p Payload
+          cp -r App.app Payload/
+          zip -r Saturday-iOS-Debug.ipa Payload
+
+      - name: Upload iOS App Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Saturday-iOS-Debug-IPA
+          path: ./frontend/ios/App/build/Build/Products/Debug-iphoneos/Saturday-iOS-Debug.ipa
