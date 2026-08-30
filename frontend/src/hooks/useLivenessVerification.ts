@@ -31,7 +31,8 @@ export interface OtpVerifyResponse {
   verifiedAt: string;
 }
 
-const API_BASE = "http://127.0.0.1:8000";
+import { getApiBase } from "../config";
+const API_BASE = getApiBase();
 
 /**
  * Hook de seguridad de grado bancario (KYC & Zero-Trust):

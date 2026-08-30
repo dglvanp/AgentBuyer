@@ -6,7 +6,8 @@ import AccountView from "./components/AccountView";
 import AuditView from "./components/AuditView";
 import { checkDetailLabel, checkRuleLabel, displayName, localizedText, saturdayStateLabel, translateBackendText, verdictLabel } from "./lib/presentation";
 
-const API_BASE = "http://127.0.0.1:8000";
+import { getApiBase } from "./config";
+const API_BASE = getApiBase();
 
 type LiveState = {
   status: "active" | "revoked" | "expired";

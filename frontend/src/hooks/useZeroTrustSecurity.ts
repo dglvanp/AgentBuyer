@@ -56,7 +56,8 @@ export interface ZeroTrustSecurityState {
   isSubmitEnabled: boolean;
 }
 
-const API_BASE = "http://127.0.0.1:8000";
+import { getApiBase } from "../config";
+const API_BASE = getApiBase();
 
 /**
  * Custom Hook de React para Enrolamiento Fuerte Único (Zero-Trust MFA).

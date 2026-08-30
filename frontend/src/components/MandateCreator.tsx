@@ -4,7 +4,8 @@ import Saturday, { type SaturdayExpression } from "./Saturday";
 import { useLivenessVerification } from "../hooks/useLivenessVerification";
 import { useZeroTrustSecurity } from "../hooks/useZeroTrustSecurity";
 
-const API_BASE = "http://127.0.0.1:8000";
+import { getApiBase } from "../config";
+const API_BASE = getApiBase();
 
 type MandateCreatorProps = {
   onCreated: (mandateId: string) => void;

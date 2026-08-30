@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { auditTypeLabel, displayName, localizedText, verdictLabel } from "../lib/presentation";
 
-const API_BASE = "http://127.0.0.1:8000";
+import { getApiBase } from "../config";
+const API_BASE = getApiBase();
 type AuditEvent = { event_id: string; timestamp: string; type: string; mandate_id: string; verdict?: "APPROVE" | "ESCALATE" | "REJECT"; summary: string };
 
 function formatDate(timestamp: string) {
